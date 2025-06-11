@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BaZi Fortune Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入中文字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background-color: #FDF6E9;
+            background-image: 
+                linear-gradient(rgba(253, 246, 233, 0.9), rgba(253, 246, 233, 0.9)),
+                url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c-5.523 0-10-4.477-10-10zm-30 0c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c-5.523 0-10-4.477-10-10z' fill='%23D4B68B' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+        .chinese-border {
+            border: 2px solid #8B4513;
+            box-shadow: 0 0 0 3px #FDF6E9, 0 0 0 5px #8B4513;
+            position: relative;
+        }
+        .chinese-border::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border: 1px solid #8B4513;
+            z-index: -1;
+        }
+        .result-card {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease-out;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        .result-card.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .loading {
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+        input[type="date"], select {
+            font-size: 16px !important;
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        .container {
+            padding: 1rem;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        @media (min-width: 640px) {
+            .container {
+                max-width: 440px;
+            }
+        }
+        .chinese-pattern {
+            background-color: #8B4513;
+            opacity: 0.1;
+            mask-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v60M60 30H0' stroke='%23000' fill='none'/%3E%3C/svg%3E");
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v60M60 30H0' stroke='%23000' fill='none'/%3E%3C/svg%3E");
+        }
+        .submit-button {
+            background: linear-gradient(135deg, #8B4513, #D4B68B);
+            transition: all 0.3s ease;
+        }
+        .submit-button:hover {
+            background: linear-gradient(135deg, #D4B68B, #8B4513);
+            transform: translateY(-2px);
+        }
+        .color-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 5px;
+            transition: transform 0.3s ease;
+        }
+        .color-circle.white-circle {
+            border: 2px solid #8B4513;
+        }
+        .color-circle:hover {
+            transform: scale(1.2);
+        }
+        .color-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto py-6">
+        <header class="text-center mb-8">
+            <div class="inline-block chinese-border bg-white bg-opacity-90 px-8 py-4 rounded-lg">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2" style="color: #8B4513;">八字算命</h1>
+                <p class="text-gray-600">Fortune Telling Through BaZi</p>
+            </div>
+        </header>
+
+        <div class="chinese-border bg-white bg-opacity-90 rounded-xl p-6 relative">
+            <div class="absolute inset-0 chinese-pattern rounded-xl"></div>
+            <div class="relative">
+                <form id="birthForm" class="space-y-6">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2" for="birthDate">
+                            Birth Date 生辰
+                        </label>
+                        <input type="date" id="birthDate" required
+                               class="w-full px-4 py-3 border-2 border-amber-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-base">
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-gray-700 font-medium mb-2" for="birthHour">
+                            Birth Time Range 时辰
+                        </label>
+                        <select id="birthHour" required
+                                class="w-full px-4 py-3 border-2 border-amber-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-base">
+                            <option value="">Select time range 选择时间</option>
+                            <option value="0">子时 (23:00-01:00)</option>
+                            <option value="2">丑时 (01:00-03:00)</option>
+                            <option value="4">寅时 (03:00-05:00)</option>
+                            <option value="6">卯时 (05:00-07:00)</option>
+                            <option value="8">辰时 (07:00-09:00)</option>
+                            <option value="10">巳时 (09:00-11:00)</option>
+                            <option value="12">午时 (11:00-13:00)</option>
+                            <option value="14">未时 (13:00-15:00)</option>
+                            <option value="16">申时 (15:00-17:00)</option>
+                            <option value="18">酉时 (17:00-19:00)</option>
+                            <option value="20">戌时 (19:00-21:00)</option>
+                            <option value="22">亥时 (21:00-23:00)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit"
+                            class="submit-button w-full text-white py-4 px-4 rounded-lg text-lg font-medium shadow-lg">
+                        开始算命 · Calculate Fortune
+                    </button>
+                </form>
+
+                <div class="loading mt-8 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-900"></div>
+                    <p class="text-gray-600 mt-2">正在推算...</p>
+                </div>
+
+                <div id="result" class="result-card mt-8 p-6 border-2 border-amber-900 rounded-lg" style="display: none;">
+                    <h3 class="text-xl font-bold text-amber-900 mb-6 text-center">命理分析结果</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                            <p class="text-gray-700 mb-2">农历日期 Lunar Date:</p>
+                            <p class="font-semibold text-amber-900 text-lg" id="lunar-date"></p>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                            <p class="text-gray-700 mb-2">八字 BaZi:</p>
+                            <div class="grid grid-cols-4 gap-4 text-center">
+                                <div>
+                                    <p class="text-gray-600 text-sm">年柱 Year</p>
+                                    <p class="font-semibold text-amber-900 text-lg" id="year-gz"></p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600 text-sm">月柱 Month</p>
+                                    <p class="font-semibold text-amber-900 text-lg" id="month-gz"></p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600 text-sm">日柱 Day</p>
+                                    <p class="font-semibold text-amber-900 text-lg" id="day-gz"></p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600 text-sm">时柱 Hour</p>
+                                    <p class="font-semibold text-amber-900 text-lg" id="hour-gz"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                            <p class="text-gray-700">五行属性 Element:<br><span id="element" class="font-semibold text-amber-900 text-lg"></span></p>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                            <p class="text-gray-700">幸运数字 Lucky Numbers:<br><span id="numbers" class="font-semibold text-amber-900 text-lg"></span></p>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                            <p class="text-gray-700 mb-3">幸运颜色 Lucky Colors:</p>
+                            <div id="colors-display" class="color-display">
+                                <!-- Color circles will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <p class="text-amber-900 text-sm mb-3">分享你的命理 Share with friends</p>
+            <img src="/qr" alt="QR Code" class="mx-auto w-32 h-32 chinese-border bg-white p-2 rounded-lg">
+        </div>
+
+        <footer class="mt-8 text-center text-sm text-amber-800">
+            <p>基于传统八字命理与五行理论</p>
+            <p class="text-xs mt-1">Based on traditional Chinese BaZi and Five Elements theory</p>
+        </footer>
+    </div>
+
+    <script>
+        // Color mapping for CSS
+        const colorMapping = {
+            '红色': '#FF0000',
+            '橙色': '#FFA500',
+            '黄色': '#FFD700',
+            '绿色': '#008000',
+            '青色': '#00FFFF',
+            '蓝色': '#0000FF',
+            '紫色': '#800080',
+            '黑色': '#000000',
+            '白色': '#FFFFFF',
+            '金色': '#FFD700',
+            '银色': '#C0C0C0',
+            '棕色': '#8B4513',
+            '米色': '#F5F5DC'
+        };
+
+        document.getElementById('birthForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.querySelector('.loading');
+            const resultCard = document.querySelector('.result-card');
+            
+            loading.classList.add('show');
+            resultCard.style.display = 'none';
+
+            const formData = {
+                date: document.getElementById('birthDate').value,
+                hour: document.getElementById('birthHour').value
+            };
+
+            try {
+                console.log('Sending data:', formData);
+                const response = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Received data:', data);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('element').textContent = `${data.element} (${data.element_en})`;
+                document.getElementById('numbers').textContent = (data.numbers || []).join('、');
+                
+                // Update colors display with circles
+                const colorsDisplay = document.getElementById('colors-display');
+                colorsDisplay.innerHTML = ''; // Clear existing content
+                
+                data.colors.forEach((color, index) => {
+                    const colorItem = document.createElement('div');
+                    colorItem.className = 'color-item';
+                    
+                    const circle = document.createElement('span');
+                    circle.className = 'color-circle';
+                    if (color === '白色') {
+                        circle.classList.add('white-circle');
+                    }
+                    circle.style.backgroundColor = colorMapping[color] || color;
+                    
+                    const text = document.createElement('span');
+                    text.className = 'text-amber-900';
+                    text.textContent = `${color} (${data.colors_en[index]})`;
+                    
+                    colorItem.appendChild(circle);
+                    colorItem.appendChild(text);
+                    colorsDisplay.appendChild(colorItem);
+                });
+                
+                // Update BaZi display
+                document.getElementById('lunar-date').textContent = data.bazi.lunar_date;
+                document.getElementById('year-gz').textContent = data.bazi.year;
+                document.getElementById('month-gz').textContent = data.bazi.month;
+                document.getElementById('day-gz').textContent = data.bazi.day;
+                document.getElementById('hour-gz').textContent = data.bazi.hour;
+                
+                loading.classList.remove('show');
+                resultCard.style.display = 'block';
+                resultCard.classList.add('show');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('发生错误: ' + error.message);
+                loading.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html> 
