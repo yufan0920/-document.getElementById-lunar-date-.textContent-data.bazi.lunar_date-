@@ -230,19 +230,11 @@ def calculate():
         # Calculate dominant element
         element_cn, element_en = get_element_from_gz(year_gz, month_gz, day_gz, hour_gz)
         
-        # Generate lucky numbers based on BaZi
-        lucky_numbers = list(range(1, 10))  # Simplified for example
-        
-        # Define colors based on the element
-        color_mappings = {
-            '木': (['绿色', '青色'], ['Green', 'Blue-Green']),
-            '火': (['红色', '紫色'], ['Red', 'Purple']),
-            '土': (['黄色', '棕色'], ['Yellow', 'Brown']),
-            '金': (['白色', '金色'], ['White', 'Gold']),
-            '水': (['黑色', '蓝色'], ['Black', 'Blue'])
-        }
-        
-        colors_cn, colors_en = color_mappings[element_cn]
+        # 根据五行获取幸运数字和颜色
+        element_info = FIVE_ELEMENTS[element_cn]
+        lucky_numbers = element_info["numbers"]
+        colors_cn = element_info["colors"]
+        colors_en = element_info["colors_en"]
         
         bazi = {
             'year': year_gz,
