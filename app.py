@@ -218,40 +218,59 @@ def calculate():
         birth_date = datetime.strptime(data['date'], '%Y-%m-%d')
         birth_hour = int(data['hour'])
         
+        # 验证日期范围 (sxtwl支持的范围是1900-2100)
+        if birth_date.year < 1900 or birth_date.year >= 2100:
+            return jsonify({"error": "日期超出范围，请输入1900年到2099年之间的日期"}), 400
+            
         logger.debug(f"Parsed date: {birth_date}, hour: {birth_hour}")
         
-        # Convert to lunar calendar using sxtwl
-        lunar = sxtwl.fromSolar(birth_date.year, birth_date.month, birth_date.day)
-        
-        # Get BaZi components
-        year_gz, month_gz, day_gz = get_gan_zhi(lunar)
-        hour_gz = get_hour_gz(birth_hour, day_gz[0])
-        
-        # Calculate dominant element
-        element_cn, element_en = get_element_from_gz(year_gz, month_gz, day_gz, hour_gz)
-        
-        # 根据五行获取幸运数字和颜色
-        element_info = FIVE_ELEMENTS[element_cn]
-        lucky_numbers = element_info["numbers"]
-        colors_cn = element_info["colors"]
-        colors_en = element_info["colors_en"]
-        
-        bazi = {
-            'year': year_gz,
-            'month': month_gz,
-            'day': day_gz,
-            'hour': hour_gz,
-            'lunar_date': f"{lunar.getLunarYear()}年{lunar.getLunarMonth()}月{lunar.getLunarDay()}日"
-        }
-        
-        return jsonify({
-            'element': element_cn,
-            'element_en': element_en,
-            'numbers': lucky_numbers,
-            'colors': colors_cn,
-            'colors_en': colors_en,
-            'bazi': bazi
-        })
+        try:
+            # Convert to lunar calendar using sxtwl
+            lunar = sxtwl.fromSolar(birth_date.year, birth_date.month, birth_date.day)
+            logger.debug(f"Converted to lunar date: year={lunar.getLunarYear()}, month={lunar.getLunarMonth()}, day={lunar.getLunarDay()}")
+            
+            # Get BaZi components
+            year_gz, month_gz, day_gz = get_gan_zhi(lunar)
+            logger.debug(f"Generated GanZhi: year={year_gz}, month={month_gz}, day={day_gz}")
+            
+            hour_gz = get_hour_gz(birth_hour, day_gz[0])
+            logger.debug(f"Generated hour GanZhi: {hour_gz}")
+            
+            # Calculate dominant element
+            element_cn, element_en = get_element_from_gz(year_gz, month_gz, day_gz, hour_gz)
+            logger.debug(f"Calculated element: {element_cn} ({element_en})")
+            
+            # 根据五行获取幸运数字和颜色
+            element_info = FIVE_ELEMENTS[element_cn]
+            lucky_numbers = element_info["numbers"]
+            colors_cn = element_info["colors"]
+            colors_en = element_info["colors_en"]
+            
+            bazi = {
+                'year': year_gz,
+                'month': month_gz,
+                'day': day_gz,
+                'hour': hour_gz,
+                'lunar_date': f"{lunar.getLunarYear()}年{lunar.getLunarMonth()}月{lunar.getLunarDay()}日",
+                'solar_date': f"{birth_date.year}年{birth_date.month}月{birth_date.day}日"
+            }
+            
+            return jsonify({
+                'element': element_cn,
+                'element_en': element_en,
+                'numbers': lucky_numbers,
+                'colors': colors_cn,
+                'colors_en': colors_en,
+                'bazi': bazi
+            })
+            
+        except Exception as e:
+            logger.error(f"Error in lunar date calculation: {str(e)}")
+            return jsonify({"error": f"农历日期计算错误: {str(e)}"}), 500
+            
+    except ValueError as e:
+        logger.error(f"Invalid date format: {str(e)}")
+        return jsonify({"error": "日期格式无效，请使用YYYY-MM-DD格式"}), 400
     except Exception as e:
         logger.error(f"Error occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
